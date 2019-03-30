@@ -1,5 +1,7 @@
 # Sonix: Elixir client for the sonic
 
+[![Hex pm](http://img.shields.io/hexpm/v/sonix.svg?style=flat)](https://hex.pm/packages/sonix)
+
 Sonic: https://github.com/valeriansaliou/sonic
 
 # Usage
