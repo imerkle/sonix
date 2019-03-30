@@ -2,12 +2,7 @@
 
 Sonic: https://github.com/valeriansaliou/sonic
 
-#Usage
-
-
-```
-
-```
+# Usage
 
 Tests & Examples can be found in test/sonix_test.exs
 
