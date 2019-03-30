@@ -4,7 +4,7 @@ Sonic: https://github.com/valeriansaliou/sonic
 
 # Usage
 
-Tests & Examples can be found in test/sonix_test.exs
+Tests & Examples can be found in [test/sonix_test.exs](https://github.com/imerkle/sonix/blob/master/test/sonix_test.exs)
 
 ## Installation
 
