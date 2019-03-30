@@ -6,6 +6,8 @@ Sonic: https://github.com/valeriansaliou/sonic
 
 # Usage
 
+[Documentation](https://hexdocs.pm/sonix/api-reference.html)
+
 Tests & Examples can be found in [test/sonix_test.exs](https://github.com/imerkle/sonix/blob/master/test/sonix_test.exs)
 
 ## Installation
