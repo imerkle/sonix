@@ -1,14 +1,28 @@
 defmodule Sonix.MixProject do
   use Mix.Project
 
+  @repo_url "https://github.com/imerkle/sonix"
+  @version "0.1.0"
+  
   def project do
     [
       app: :sonix,
-      description: "Client for Sonic: Fast, lightweight & schema-less search backend .An alternative to Elasticsearch",
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+
+      docs: [
+        source_url: @repo_url
+      ],
+
+      # Hex
+      description: "Client for Sonic: Fast, lightweight & schema-less search backend",
+      package: [
+        licenses: ["MIT"],
+        links: %{"GitHub" => @repo_url}
+      ]
+
     ]
   end
 

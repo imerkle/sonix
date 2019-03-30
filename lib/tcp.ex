@@ -1,4 +1,7 @@
 defmodule Sonix.Tcp do
+  @moduledoc """
+    TCP Connection Layer for Sonix
+  """
 
     use Connection
   
@@ -6,8 +9,29 @@ defmodule Sonix.Tcp do
       Connection.start_link(__MODULE__, {host, port, opts, timeout})
     end
   
+  @doc """
+  
+  Send any Command to Sonic
+
+  ## Examples
+
+      iex> Sonix.send(conn, "PING")
+      :ok
+
+  """
+
     def send(conn, data), do: Connection.call(conn, {:send, data<>"\n"})
   
+  @doc """
+  
+  Recieve response from Sonic
+
+  ## Examples
+
+      iex> Sonix.recv(conn)
+      PONG
+      
+  """    
     def recv(conn, bytes \\ 0, timeout \\ 3000) do
       {:ok, x} = Connection.call(conn, {:recv, bytes, timeout})
       x = x |> String.slice(0..-2)

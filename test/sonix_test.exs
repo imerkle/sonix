@@ -1,6 +1,6 @@
 defmodule SonixTest do
   use ExUnit.Case, async: true
-  doctest Sonix
+  #doctest Sonix
   require Logger
   alias Sonix.Tcp
 

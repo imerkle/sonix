@@ -1,16 +1,59 @@
 defmodule Sonix do
   alias Sonix.Tcp
 
+  @moduledoc """
+    Highlevel API
+  """
+
+  @doc """
+  Initializes Tcp Client Genserver
+
+  ## Examples
+
+      iex> Sonix.init()
+      #PID<0.177.0>
+
+  """
+
   def init(host \\ {127,0,0,1}, port \\ 1491) do
     {:ok, conn} = Tcp.start_link(host, port, [mode: :binary, packet: :line], 1000)
     Tcp.recv(conn)
     conn
   end
+
+  @doc """
+  Start with a mode
+
+  ## Examples
+
+      iex> Sonix.start(conn, "search", "SecretPassword")
+      :ok
+  """
+
   def start(conn, channel, password) do
     :ok = Tcp.send(conn, "START #{channel} #{password}")
     Tcp.recv(conn)
   end
   
+
+  @doc """
+  
+  Query/Suggest a term
+  
+  ## Parameters
+
+    - opts: default values are [type: "QUERY", collection: "", bucket: "default", term: "", limit: 10, offset: 0]
+
+  ## Examples
+
+      iex> Sonix.search(conn, [type: "QUERY", collection: "messages", "term": "spiderman"])
+      obj:1
+      
+      iex> Sonix.suggest(conn, [type: "SUGGEST", collection: "messages", "term": "spider"])
+      spiderman
+      
+  """
+
   @default_search %{type: "QUERY", collection: "", bucket: "default", term: "", limit: 10, offset: 0}  
   def search(conn, opts \\ []) do
     %{type: type, collection: collection, bucket: bucket, term: term, limit: limit, offset: offset} = Enum.into(opts, @default_search)
@@ -23,6 +66,22 @@ defmodule Sonix do
     y |> String.replace("#{type} #{pending_id} ", "") |> String.split(" ") |> Enum.filter(& &1 != "")
   end
   
+
+  @doc """
+  
+  Push a text
+  
+  ## Parameters
+
+    - opts: default values are [collection: "", bucket: "default", object: "", term: ""]
+
+  ## Examples
+
+      iex> Sonix.push(conn, [collection: "messages", object: "obj:1", "term": "spiderman is cool"])
+      :ok
+      
+  """
+
   @default_push %{collection: "", bucket: "default", object: "", term: ""}  
   def push(conn, opts \\ []) do
     %{collection: collection, bucket: bucket, object: object, term: term} = Enum.into(opts, @default_push)
@@ -33,6 +92,21 @@ defmodule Sonix do
     end
   end
 
+  @doc """
+  
+  Pop a text
+  
+  ## Parameters
+
+    - opts: default values are [collection: "", bucket: "default", object: "", term: ""]
+
+  ## Examples
+
+      iex> Sonix.pop(conn, [collection: "messages", object: "obj:1", "term": "spiderman"])
+      1
+      
+  """
+
   def pop(conn, opts \\ []) do
     %{collection: collection, bucket: bucket, object: object, term: term} = Enum.into(opts, @default_push)
     :ok = Tcp.send(conn, "POP #{collection} #{bucket} #{object} \"#{term}\" ")
@@ -40,6 +114,21 @@ defmodule Sonix do
     n |> Integer.parse() |> elem(0)
   end
   
+  @doc """
+  
+  Flush a collection, bucket or object
+  
+  ## Parameters
+
+    - opts: default values are [collection: "", bucket: "", object: ""]
+
+  ## Examples
+
+      iex> Sonix.flush(conn, [collection: "messages"])
+      1
+      
+  """
+
   @default_flush %{collection: "", bucket: "", object: ""}  
   def flush(conn, opts \\ []) do
     %{collection: collection, bucket: bucket, object: object} = Enum.into(opts, @default_flush)
@@ -55,6 +144,21 @@ defmodule Sonix do
     n |> Integer.parse() |> elem(0)
   end
 
+  @doc """
+  
+  Count items in a collection, bucket or object
+  
+  ## Parameters
+
+    - opts: default values are [collection: "", bucket: "", object: ""]
+
+  ## Examples
+
+      iex> Sonix.count(conn, [collection: "messages"])
+      1
+      
+  """
+
   def count(conn, opts \\ []) do
     %{collection: collection, bucket: bucket, object: object} = Enum.into(opts, @default_flush)
 
@@ -68,6 +172,16 @@ defmodule Sonix do
     "RESULT " <> n = Tcp.recv(conn)
     n |> Integer.parse() |> elem(0)
   end
+
+  @doc """
+  
+  Close a TCP connection
+
+  ## Examples
+
+      iex> Sonix.quit(conn)
+      :ok
+  """
 
   def quit(conn) do
     Tcp.send(conn, "QUIT")
