@@ -45,10 +45,10 @@ defmodule Sonix do
 
   ## Examples
 
-      iex> Sonix.search(conn, [type: "QUERY", collection: "messages", "term": "spiderman"])
+      iex> Sonix.search(conn, [type: "QUERY", collection: "messages", term: "spiderman"])
       obj:1
 
-      iex> Sonix.suggest(conn, [type: "SUGGEST", collection: "messages", "term": "spider"])
+      iex> Sonix.suggest(conn, [type: "SUGGEST", collection: "messages", term: "spider"])
       spiderman
 
   """
@@ -97,7 +97,7 @@ defmodule Sonix do
 
   ## Examples
 
-      iex> Sonix.push(conn, [collection: "messages", object: "obj:1", "term": "spiderman is cool"])
+      iex> Sonix.push(conn, [collection: "messages", object: "obj:1", term: "spiderman is cool"])
       :ok
 
   """
@@ -125,7 +125,7 @@ defmodule Sonix do
 
   ## Examples
 
-      iex> Sonix.pop(conn, [collection: "messages", object: "obj:1", "term": "spiderman"])
+      iex> Sonix.pop(conn, [collection: "messages", object: "obj:1", term: "spiderman"])
       1
 
   """
