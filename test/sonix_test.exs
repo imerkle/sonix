@@ -70,17 +70,20 @@ defmodule SonixTest do
     assert {:error, _reason} = Tcp.recv(conn)
   end
 
-  # test "SUGGEST DATA" do
-  #   ingest()
+  test "SUGGEST DATA" do
+    ingest()
 
-  #   conn = start_mode("search")
+    conn = start_mode("search")
 
-  #   Process.sleep 5000
-  #   {:ok, result} = Sonix.suggest(conn, "messages", "spi")
-  #   assert result === ["spiderman", "spiderwoman"]
+    control_conn = start_mode("control")
+    Sonix.trigger(control_conn, "consolidate")
+    Sonix.quit(control_conn)
 
-  #   Sonix.quit(conn)
-  # end
+    {:ok, result} = Sonix.suggest(conn, "messages", "spi")
+    assert result === ["spiderman", "spiderwoman"]
+
+    Sonix.quit(conn)
+  end
 
   defp ingest() do
     conn = start_mode("ingest")

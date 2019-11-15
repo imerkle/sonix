@@ -1,7 +1,7 @@
 defmodule Sonix do
   alias Sonix.Tcp
 
-  alias Sonix.Modes.{Common, Search, Ingest}
+  alias Sonix.Modes.{Common, Search, Ingest, Control}
 
   @moduledoc """
   Highlevel API
@@ -89,4 +89,8 @@ defmodule Sonix do
   defdelegate flush(conn, collection), to: Ingest
   defdelegate flush(conn, collection, bucket), to: Ingest
   defdelegate flush(conn, collection, bucket, object), to: Ingest
+
+  # Control mode
+  defdelegate trigger(conn, action), to: Control
+  defdelegate trigger(conn, action, data), to: Control
 end
