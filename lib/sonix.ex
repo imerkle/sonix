@@ -32,9 +32,11 @@ defmodule Sonix do
   defp normalize_options(host, port) when is_binary(host) do
     normalize_options(String.to_charlist(host), port)
   end
+
   defp normalize_options(host, port) when is_binary(port) do
     normalize_options(host, String.to_integer(port))
   end
+
   defp normalize_options(host, port) do
     {host, port}
   end

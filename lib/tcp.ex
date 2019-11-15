@@ -69,11 +69,11 @@ defmodule Sonix.Tcp do
         Connection.reply(from, :ok)
 
       {:error, :closed} ->
-        Logger.error fn -> "Connection closed" end
+        Logger.error(fn -> "Connection closed" end)
 
       {:error, reason} ->
         reason = :inet.format_error(reason)
-        Logger.error fn -> "Connection error: #{inspect reason}" end
+        Logger.error(fn -> "Connection error: #{inspect(reason)}" end)
     end
 
     {:connect, :reconnect, %{s | sock: nil}}

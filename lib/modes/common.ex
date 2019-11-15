@@ -2,7 +2,7 @@ defmodule Sonix.Modes.Common do
   import Sonix.Util, only: [sync_command: 2]
 
   defmacro __using__(_opts) do
-    quote [generated: true] do
+    quote generated: true do
       import Sonix.Util, only: [sync_command: 2, async_command: 2, compact_options: 1]
 
       defdelegate ping(conn), to: unquote(__MODULE__)
@@ -14,7 +14,7 @@ defmodule Sonix.Modes.Common do
   Ping server
   """
   def ping(conn) do
-    with({:ok, "PONG"} <- sync_command(conn, [type: "PING"])) do
+    with({:ok, "PONG"} <- sync_command(conn, type: "PING")) do
       :ok
     else
       error -> error
@@ -25,7 +25,7 @@ defmodule Sonix.Modes.Common do
   Stop connection
   """
   def quit(conn) do
-    with({:ok, "ENDED quit"} <- sync_command(conn, [type: "QUIT"])) do
+    with({:ok, "ENDED quit"} <- sync_command(conn, type: "QUIT")) do
       :ok
     else
       error -> error

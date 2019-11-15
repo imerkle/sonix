@@ -7,7 +7,7 @@ defmodule SonixTest do
   @pwd "SecretPassword"
 
   setup do
-    on_exit &flush/0
+    on_exit(&flush/0)
   end
 
   test "PING PONG" do
@@ -89,7 +89,9 @@ defmodule SonixTest do
     conn = start_mode("ingest")
 
     :ok = Sonix.Modes.Ingest.push(conn, "messages", "obj:1", "Spiderman is bad movie")
-    :ok = Sonix.Modes.Ingest.push(conn, "messages", "obj:2", "Batman and spiderwoman is good Movie")
+
+    :ok =
+      Sonix.Modes.Ingest.push(conn, "messages", "obj:2", "Batman and spiderwoman is good Movie")
 
     Sonix.quit(conn)
   end

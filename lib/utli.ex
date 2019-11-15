@@ -23,7 +23,6 @@ defmodule Sonix.Util do
     with(
       type when not is_nil(type) <- Keyword.get(opts, :type),
       :ok <- Tcp.send(conn, pack_message(opts)),
-
       {:ok, response} <- Tcp.recv(conn)
     ) do
       {:ok, response}
@@ -41,7 +40,6 @@ defmodule Sonix.Util do
     with(
       type when not is_nil(type) <- Keyword.fetch!(opts, :type),
       :ok <- Tcp.send(conn, pack_message(opts)),
-
       {:ok, "PENDING " <> marker} <- Tcp.recv(conn),
       {:ok, "EVENT " <> result} <- Tcp.recv(conn)
     ) do

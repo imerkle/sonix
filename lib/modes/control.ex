@@ -14,14 +14,16 @@ defmodule Sonix.Modes.Control do
   """
   @control_type "TRIGGER"
   def trigger(conn, "consolidate" = action) do
-    do_trigger(conn, [action: action])
+    do_trigger(conn, action: action)
   end
+
   def trigger(conn, action, data) when action in ["backup", "restore"] do
-    do_trigger(conn, [action: action, data: data])
+    do_trigger(conn, action: action, data: data)
   end
 
   defp do_trigger(conn, opts) do
     options = [type: @control_type] ++ opts
+
     with({:ok, @ok_flag} <- sync_command(conn, options)) do
       :ok
     else

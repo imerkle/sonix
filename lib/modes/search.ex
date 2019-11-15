@@ -21,16 +21,19 @@ defmodule Sonix.Modes.Search do
   def query(conn, collection, term) do
     query(conn, collection, @default_bucket, term)
   end
+
   def query(conn, collection, term, opts) when is_list(opts) do
     query(conn, collection, @default_bucket, term, opts)
   end
+
   def query(conn, collection, bucket, term, opts \\ [limit: 10, offset: 0]) do
-    options = [
-      type: @search_type,
-      collection: collection,
-      bucket: bucket,
-      term: term
-    ] ++ Keyword.take(opts, @permitted_options)
+    options =
+      [
+        type: @search_type,
+        collection: collection,
+        bucket: bucket,
+        term: term
+      ] ++ Keyword.take(opts, @permitted_options)
 
     conn
     |> async_command(options)
@@ -55,16 +58,19 @@ defmodule Sonix.Modes.Search do
   def suggest(conn, collection, term) do
     suggest(conn, collection, @default_bucket, term)
   end
+
   def suggest(conn, collection, term, opts) when is_list(opts) do
     suggest(conn, collection, @default_bucket, term, opts)
   end
+
   def suggest(conn, collection, bucket, term, opts \\ [limit: 10]) do
-    options = [
-      type: @search_type,
-      collection: collection,
-      bucket: bucket,
-      term: term
-    ] ++ Keyword.take(opts, @permitted_options)
+    options =
+      [
+        type: @search_type,
+        collection: collection,
+        bucket: bucket,
+        term: term
+      ] ++ Keyword.take(opts, @permitted_options)
 
     conn
     |> async_command(options)
@@ -74,5 +80,6 @@ defmodule Sonix.Modes.Search do
   defp convert_result({:ok, result}) do
     {:ok, String.split(result, " ", trim: true)}
   end
+
   defp convert_result(error), do: error
 end
