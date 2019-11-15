@@ -1,8 +1,10 @@
 defmodule Sonix do
   alias Sonix.Tcp
 
+  alias Sonix.Modes.{Common, Search, Ingest}
+
   @moduledoc """
-    Highlevel API
+  Highlevel API
   """
 
   @doc """
@@ -10,15 +12,31 @@ defmodule Sonix do
 
   ## Examples
 
-      iex> Sonix.init()
-      #PID<0.177.0>
+  iex> Sonix.init()
+  #PID<0.177.0>
 
   """
-
   def init(host \\ {127, 0, 0, 1}, port \\ 1491) do
-    {:ok, conn} = Tcp.start_link(host, port, [mode: :binary, packet: :line], 1000)
-    Tcp.recv(conn)
-    conn
+    {host, port} = normalize_options(host, port)
+
+    with(
+      {:ok, conn} = Tcp.start_link(host, port, [mode: :binary, packet: :line], 1000),
+      {:ok, "CONNECTED " <> _server} <- Tcp.recv(conn)
+    ) do
+      {:ok, conn}
+    else
+      error -> error
+    end
+  end
+
+  defp normalize_options(host, port) when is_binary(host) do
+    normalize_options(String.to_charlist(host), port)
+  end
+  defp normalize_options(host, port) when is_binary(port) do
+    normalize_options(host, String.to_integer(port))
+  end
+  defp normalize_options(host, port) do
+    {host, port}
   end
 
   @doc """
@@ -26,192 +44,49 @@ defmodule Sonix do
 
   ## Examples
 
-      iex> Sonix.start(conn, "search", "SecretPassword")
-      :ok
+  iex> Sonix.start(conn, "search", "SecretPassword")
+  {:ok, #PID<0.177.0>}
   """
-
   def start(conn, channel, password) do
-    :ok = Tcp.send(conn, "START #{channel} #{password}")
-    Tcp.recv(conn)
-  end
+    with(:ok <- Tcp.send(conn, "START #{channel} #{password}")) do
+      started = "STARTED #{channel} protocol(1) buffer(20000)"
 
-  @doc """
-
-  Query/Suggest a term
-
-  ## Parameters
-
-    - opts: default values are [type: "QUERY", collection: "", bucket: "default", term: "", limit: 10, offset: 0]
-
-  ## Examples
-
-      iex> Sonix.search(conn, [type: "QUERY", collection: "messages", term: "spiderman"])
-      obj:1
-
-      iex> Sonix.suggest(conn, [type: "SUGGEST", collection: "messages", term: "spider"])
-      spiderman
-
-  """
-
-  @default_search %{
-    type: "QUERY",
-    collection: "",
-    bucket: "default",
-    term: "",
-    limit: 10,
-    offset: 0
-  }
-  def search(conn, opts \\ []) do
-    %{
-      type: type,
-      collection: collection,
-      bucket: bucket,
-      term: term,
-      limit: limit,
-      offset: offset
-    } = Enum.into(opts, @default_search)
-
-    offset_str = if type == "QUERY", do: "OFFSET(#{offset})", else: ""
-
-    :ok =
-      Tcp.send(conn, "#{type} #{collection} #{bucket} \"#{term}\" LIMIT(#{limit}) #{offset_str}")
-
-    p = Tcp.recv(conn)
-    "PENDING " <> pending_id = p
-    x = Tcp.recv(conn)
-    "EVENT " <> y = x
-
-    y
-    |> String.replace("#{type} #{pending_id} ", "")
-    |> String.split(" ")
-    |> Enum.filter(&(&1 != ""))
-  end
-
-  @doc """
-
-  Push a text
-
-  ## Parameters
-
-    - opts: default values are [collection: "", bucket: "default", object: "", term: ""]
-
-  ## Examples
-
-      iex> Sonix.push(conn, [collection: "messages", object: "obj:1", term: "spiderman is cool"])
-      :ok
-
-  """
-
-  @default_push %{collection: "", bucket: "default", object: "", term: ""}
-  def push(conn, opts \\ []) do
-    %{collection: collection, bucket: bucket, object: object, term: term} =
-      Enum.into(opts, @default_push)
-
-    :ok = Tcp.send(conn, "PUSH #{collection} #{bucket} #{object} \"#{term}\" ")
-
-    case Tcp.recv(conn) do
-      "OK" -> :ok
-      "ERR " <> reason -> {:err, reason}
+      case Tcp.recv(conn) do
+        {:ok, ^started} -> {:ok, conn}
+        {:ok, error} -> {:error, error}
+        error -> error
+      end
+    else
+      error -> error
     end
   end
 
-  @doc """
+  # Common mode
+  defdelegate ping(conn), to: Common
+  defdelegate quit(conn), to: Common
 
-  Pop a text
+  # Search mode
+  defdelegate query(conn, collection, term), to: Search
+  defdelegate query(conn, collection, term, opts), to: Search
+  defdelegate query(conn, collection, bucket, term, opts), to: Search
 
-  ## Parameters
+  defdelegate suggest(conn, collection, term), to: Search
+  defdelegate suggest(conn, collection, term, opts), to: Search
+  defdelegate suggest(conn, collection, bucket, term, opts), to: Search
 
-    - opts: default values are [collection: "", bucket: "default", object: "", term: ""]
+  # Ingest mode
+  defdelegate push(conn, collection, object, term), to: Ingest
+  defdelegate push(conn, collection, object, term, opts), to: Ingest
+  defdelegate push(conn, collection, bucket, object, term, opts), to: Ingest
 
-  ## Examples
+  defdelegate pop(conn, collection, object, term), to: Ingest
+  defdelegate pop(conn, collection, bucket, object, term), to: Ingest
 
-      iex> Sonix.pop(conn, [collection: "messages", object: "obj:1", term: "spiderman"])
-      1
+  defdelegate count(conn, collection), to: Ingest
+  defdelegate count(conn, collection, bucket), to: Ingest
+  defdelegate count(conn, collection, bucket, object), to: Ingest
 
-  """
-
-  def pop(conn, opts \\ []) do
-    %{collection: collection, bucket: bucket, object: object, term: term} =
-      Enum.into(opts, @default_push)
-
-    :ok = Tcp.send(conn, "POP #{collection} #{bucket} #{object} \"#{term}\" ")
-    "RESULT " <> n = Tcp.recv(conn)
-    n |> Integer.parse() |> elem(0)
-  end
-
-  @doc """
-
-  Flush a collection, bucket or object
-
-  ## Parameters
-
-    - opts: default values are [collection: "", bucket: "", object: ""]
-
-  ## Examples
-
-      iex> Sonix.flush(conn, [collection: "messages"])
-      1
-
-  """
-
-  @default_flush %{collection: "", bucket: "", object: ""}
-  def flush(conn, opts \\ []) do
-    %{collection: collection, bucket: bucket, object: object} = Enum.into(opts, @default_flush)
-
-    cmd =
-      cond do
-        object != "" -> "FLUSHO #{collection} #{bucket} #{object}"
-        bucket != "" -> "FLUSHB #{collection} #{bucket}"
-        collection != "" -> "FLUSHC #{collection}"
-      end
-
-    :ok = Tcp.send(conn, cmd)
-    "RESULT " <> n = Tcp.recv(conn)
-    n |> Integer.parse() |> elem(0)
-  end
-
-  @doc """
-
-  Count items in a collection, bucket or object
-
-  ## Parameters
-
-    - opts: default values are [collection: "", bucket: "", object: ""]
-
-  ## Examples
-
-      iex> Sonix.count(conn, [collection: "messages"])
-      1
-
-  """
-
-  def count(conn, opts \\ []) do
-    %{collection: collection, bucket: bucket, object: object} = Enum.into(opts, @default_flush)
-
-    cmd =
-      cond do
-        object != "" -> "COUNT #{collection} #{bucket} #{object}"
-        bucket != "" -> "COUNT #{collection} #{bucket}"
-        collection != "" -> "COUNT #{collection}"
-      end
-
-    :ok = Tcp.send(conn, cmd)
-    "RESULT " <> n = Tcp.recv(conn)
-    n |> Integer.parse() |> elem(0)
-  end
-
-  @doc """
-
-  Close a TCP connection
-
-  ## Examples
-
-      iex> Sonix.quit(conn)
-      :ok
-  """
-
-  def quit(conn) do
-    Tcp.send(conn, "QUIT")
-    Tcp.recv(conn)
-  end
+  defdelegate flush(conn, collection), to: Ingest
+  defdelegate flush(conn, collection, bucket), to: Ingest
+  defdelegate flush(conn, collection, bucket, object), to: Ingest
 end

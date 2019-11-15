@@ -3,6 +3,8 @@ defmodule Sonix.Tcp do
     TCP Connection Layer for Sonix
   """
 
+  require Logger
+
   use Connection
 
   def start_link(host, port, opts, timeout \\ 5000) do
@@ -10,35 +12,32 @@ defmodule Sonix.Tcp do
   end
 
   @doc """
-
   Send any Command to Sonic
 
   ## Examples
 
       iex> Sonix.send(conn, "PING")
       :ok
-
   """
 
   def send(conn, data), do: Connection.call(conn, {:send, data <> "\n"})
 
   @doc """
-
   Recieve response from Sonic
 
   ## Examples
 
       iex> Sonix.recv(conn)
       PONG
-
   """
   def recv(conn, bytes \\ 0, timeout \\ 3000) do
-    {:ok, x} = Connection.call(conn, {:recv, bytes, timeout})
-    x = x |> String.slice(0..-2)
-
-    case x do
-      "ERR " <> reason -> raise reason
-      _ -> x
+    with({:ok, response} <- Connection.call(conn, {:recv, bytes, timeout})) do
+      case String.trim(response) do
+        "ERR " <> reason -> {:error, reason}
+        response -> {:ok, response}
+      end
+    else
+      error -> error
     end
   end
 
@@ -70,11 +69,11 @@ defmodule Sonix.Tcp do
         Connection.reply(from, :ok)
 
       {:error, :closed} ->
-        :error_logger.format("Connection closed~n", [])
+        Logger.error fn -> "Connection closed" end
 
       {:error, reason} ->
         reason = :inet.format_error(reason)
-        :error_logger.format("Connection error: ~s~n", [reason])
+        Logger.error fn -> "Connection error: #{inspect reason}" end
     end
 
     {:connect, :reconnect, %{s | sock: nil}}
@@ -99,8 +98,8 @@ defmodule Sonix.Tcp do
       {:ok, _} = ok ->
         {:reply, ok, s}
 
-      {:error, :timeout} = timeout ->
-        {:reply, timeout, s}
+      {:error, :timeout} = error ->
+        {:reply, error, s}
 
       {:error, _} = error ->
         {:disconnect, error, error, s}

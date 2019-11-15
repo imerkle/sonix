@@ -1,10 +1,12 @@
 defmodule Sonix.Modes.Search do
-  alias Sonix.Tcp
+  use Sonix.Modes.Common
 
   @default_bucket "default"
 
   @doc """
-  Query a term
+  Query database
+
+  syntax: `QUERY <collection> <bucket> "<terms>" [LIMIT(<count>)]? [OFFSET(<count>)]? [LANG(<locale>)]?`
 
   ## Examples
 
@@ -30,11 +32,15 @@ defmodule Sonix.Modes.Search do
       term: term
     ] ++ Keyword.take(opts, @permitted_options)
 
-    command(conn, options)
+    conn
+    |> async_command(options)
+    |> convert_result()
   end
 
   @doc """
-  Suggest a term
+  Auto-completes word
+
+  syntax: `SUGGEST <collection> <bucket> "<word>" [LIMIT(<count>)]?`
 
   ## Examples
 
@@ -60,36 +66,13 @@ defmodule Sonix.Modes.Search do
       term: term
     ] ++ Keyword.take(opts, @permitted_options)
 
-    command(conn, options)
+    conn
+    |> async_command(options)
+    |> convert_result()
   end
 
-  defp command(conn, opts) do
-    with(
-      type when not is_nil(type) <- Keyword.fetch!(opts, :type),
-      :ok <- Tcp.send(conn, pack_message(opts)),
-
-      "PENDING " <> pending_id <- Tcp.recv(conn),
-      "EVENT " <> result <- Tcp.recv(conn)
-    ) do
-      result
-      |> String.trim_leading("#{type} #{pending_id}")
-      |> String.split(" ", trim: true)
-    else
-      nil -> {:error, :invalid_options}
-      reason -> {:error, reason}
-    end
+  defp convert_result({:ok, result}) do
+    {:ok, String.split(result, " ", trim: true)}
   end
-
-  defp pack_message(options, acc \\ "")
-  defp pack_message([first | rest], acc) do
-    pack_message(rest, pack_message(first, acc))
-  end
-  defp pack_message([], acc), do: acc
-  defp pack_message({_key, nil}, acc), do: acc
-  defp pack_message({:offset, value}, acc), do: "#{acc} OFFSET(#{value})"
-  defp pack_message({:limit, value}, acc), do: "#{acc} LIMIT(#{value})"
-  defp pack_message({:lang, value}, acc), do: "#{acc} LANG(#{value})"
-  defp pack_message({:term, value}, acc), do: ~s[#{acc} "#{value}"]
-  defp pack_message({:type, value}, _acc), do: value
-  defp pack_message({_key, value}, acc), do: "#{acc} #{value}"
+  defp convert_result(error), do: error
 end
