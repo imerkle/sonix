@@ -94,6 +94,12 @@ defmodule SonixTest do
     Sonix.quit(SearchConn)
   end
 
+  test "QUIT" do
+    conn = start_mode("search")
+
+    assert :ok === Sonix.quit(conn)
+  end
+
   defp ingest() do
     conn = start_mode("ingest")
 
