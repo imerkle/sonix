@@ -98,6 +98,7 @@ defmodule SonixTest do
     conn = start_mode("search")
 
     assert :ok === Sonix.quit(conn)
+    refute Process.alive?(conn)
   end
 
   defp ingest() do

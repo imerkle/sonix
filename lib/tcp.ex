@@ -67,16 +67,16 @@ defmodule Sonix.Tcp do
     case info do
       {:close, from} ->
         Connection.reply(from, :ok)
+        {:stop, :normal, s}
 
       {:error, :closed} ->
         Logger.error(fn -> "Connection closed" end)
+        {:connect, :reconnect, %{s | sock: nil}}
 
       {:error, reason} ->
-        reason = :inet.format_error(reason)
         Logger.error(fn -> "Connection error: #{inspect(reason)}" end)
+        {:connect, :reconnect, %{s | sock: nil}}
     end
-
-    {:connect, :reconnect, %{s | sock: nil}}
   end
 
   def handle_call(_, _, %{sock: nil} = s) do
