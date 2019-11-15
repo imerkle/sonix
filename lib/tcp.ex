@@ -7,8 +7,8 @@ defmodule Sonix.Tcp do
 
   use Connection
 
-  def start_link(host, port, opts, timeout \\ 5000) do
-    Connection.start_link(__MODULE__, {host, port, opts, timeout})
+  def start_link(host, port, args, gen_server_opts, timeout \\ 5000) do
+    Connection.start_link(__MODULE__, {host, port, args, timeout}, gen_server_opts)
   end
 
   @doc """

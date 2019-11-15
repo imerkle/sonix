@@ -16,11 +16,12 @@ defmodule Sonix do
   #PID<0.177.0>
 
   """
-  def init(host \\ {127, 0, 0, 1}, port \\ 1491) do
+  def init(host \\ {127, 0, 0, 1}, port \\ 1491, gen_server_opts \\ []) do
     {host, port} = normalize_options(host, port)
 
     with(
-      {:ok, conn} = Tcp.start_link(host, port, [mode: :binary, packet: :line], 1000),
+      {:ok, conn} =
+        Tcp.start_link(host, port, [mode: :binary, packet: :line], gen_server_opts, 1000),
       {:ok, "CONNECTED " <> _server} <- Tcp.recv(conn)
     ) do
       {:ok, conn}

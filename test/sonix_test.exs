@@ -85,6 +85,15 @@ defmodule SonixTest do
     Sonix.quit(conn)
   end
 
+  test "custom name of the GenServer" do
+    {:ok, _conn} = Sonix.init("localhost", 1491, name: SearchConn)
+    {:ok, _conn} = Sonix.start(SearchConn, "search", @pwd)
+
+    assert :ok === Sonix.ping(SearchConn)
+
+    Sonix.quit(SearchConn)
+  end
+
   defp ingest() do
     conn = start_mode("ingest")
 
