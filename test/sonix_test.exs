@@ -101,6 +101,13 @@ defmodule SonixTest do
     refute Process.alive?(conn)
   end
 
+  test "QUIT when mode not started" do
+    {:ok, conn} = Sonix.init()
+
+    assert :ok === Sonix.quit(conn)
+    refute Process.alive?(conn)
+  end
+
   defp ingest() do
     conn = start_mode("ingest")
 

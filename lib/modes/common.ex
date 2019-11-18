@@ -25,7 +25,7 @@ defmodule Sonix.Modes.Common do
   Stop connection
   """
   def quit(conn) do
-    with({:ok, "ENDED quit"} <- sync_command(conn, type: "QUIT")) do
+    with({:ok, "ENDED " <> _} <- sync_command(conn, type: "QUIT")) do
       Sonix.Tcp.close(conn)
       :ok
     else
