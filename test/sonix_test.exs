@@ -1,121 +1,144 @@
 defmodule SonixTest do
   use ExUnit.Case, async: true
-  #doctest Sonix
+  # doctest Sonix
   require Logger
   alias Sonix.Tcp
 
   @pwd "SecretPassword"
 
-  def ingest() do
-    conn = Sonix.init()
-    Sonix.start(conn, "ingest", @pwd)
-
-    :ok = Sonix.push(conn, [collection: "messages", object: "obj:1", term: "Spiderman is bad movie"])
-    :ok = Sonix.push(conn, [collection: "messages", object: "obj:2", term: "Batman and spiderwoman is good Movie"])
-
-    Sonix.quit(conn)
-  end
-
-  def flush() do
-    conn = Sonix.init()
-    Sonix.start(conn, "ingest", @pwd)
-    _n = Sonix.flush(conn, [collection: "messages"])    
-    #Logger.info("Flushed #{n}")
-    Sonix.quit(conn)
+  setup do
+    on_exit(&flush/0)
   end
 
   test "PING PONG" do
-    conn = Sonix.init()
-    Sonix.start(conn, "search", @pwd)
-    
-    Tcp.send(conn, "PING")
-    y = Tcp.recv(conn)
-    
-    Sonix.quit(conn)
+    conn = start_mode("search")
 
-    assert y == "PONG"
+    assert :ok === Sonix.ping(conn)
+
+    Sonix.quit(conn)
   end
+
   test "FLUSH ALL" do
-    flush()
-    
-    conn = Sonix.init()
-    Sonix.start(conn, "ingest", @pwd)
-    x = Sonix.count(conn, [collection: "messages"])
+    conn = start_mode("ingest")
 
-    assert x == 0
+    assert {:ok, 0} === Sonix.count(conn, "messages")
+
     Sonix.quit(conn)
-
   end
+
   test "PUSH DATA" do
     ingest()
   end
+
   test "POP DATA" do
-    flush()
     ingest()
 
-    conn = Sonix.init()
-    Sonix.start(conn, "ingest", @pwd)
-    x = Sonix.pop(conn, [collection: "messages", object: "obj:1", term: "spiderman"])
-    
-    assert x == 1
-    
-    x = Sonix.pop(conn, [collection: "messages", object: "obj:3", term: "noman"])
-    assert x == 0
+    conn = start_mode("ingest")
+
+    assert {:ok, 1} === Sonix.pop(conn, "messages", "obj:1", "spiderman")
+    assert {:ok, 0} === Sonix.pop(conn, "messages", "obj:3", "noman")
 
     Sonix.quit(conn)
-
   end
+
   test "SEARCH DATA" do
-    flush()
     ingest()
 
-    conn = Sonix.init()
-    Sonix.start(conn, "search", @pwd)
+    conn = start_mode("search")
 
-    x = Sonix.search(conn, [type: "QUERY", collection: "messages", term: "movie"])
-    assert x == ["obj:2","obj:1"]
-    x = Sonix.search(conn, [type: "QUERY", collection: "messages", term: "Spiderman"])
-    assert x == ["obj:1"]
-    
+    assert {:ok, ["obj:2", "obj:1"]} === Sonix.query(conn, "messages", "movie")
+    assert {:ok, ["obj:1"]} === Sonix.query(conn, "messages", "Spiderman")
+
     Sonix.quit(conn)
   end
+
   test "SEARCH INVALID DATA" do
-    flush()
     ingest()
 
-    conn = Sonix.init()
-    Sonix.start(conn, "search", @pwd)
+    conn = start_mode("search")
 
-    x = Sonix.search(conn, [type: "QUERY", collection: "messages", term: "thisdoesnotexists"])
-    assert x == []
-
-    Sonix.quit(conn)
-  end  
-  test "ERROR HANDLE" do
-    conn = Sonix.init()
-    Sonix.start(conn, "search", @pwd)
-
-    try do
-      :ok = Tcp.send(conn, "CAUSE AN ERROR")
-      IO.inspect(Tcp.recv(conn))
-    rescue
-      RuntimeError -> "" #Logger.info("Caught Error")
-    end
-
-  end 
-"""  
- Some issues SUGGEST isn't working with recently created data.
-  test "SUGGEST DATA" do
-    flush()
-    ingest()
-    
-    conn = Sonix.init()
-    Sonix.start(conn, "search", @pwd)
-    
-    x = Sonix.search(conn, [type: "SUGGEST", collection: "messages", term: "spi"])
-    assert x == ["spiderman", "spiderwoman"]
+    assert {:ok, []} === Sonix.query(conn, "messages", "thisdoesnotexists")
 
     Sonix.quit(conn)
   end
-"""
+
+  test "ERROR HANDLE" do
+    conn = start_mode("search")
+
+    :ok = Tcp.send(conn, "CAUSE AN ERROR")
+
+    assert {:error, _reason} = Tcp.recv(conn)
+  end
+
+  test "SUGGEST DATA" do
+    ingest()
+
+    conn = start_mode("search")
+
+    control_conn = start_mode("control")
+    Sonix.trigger(control_conn, "consolidate")
+    Sonix.quit(control_conn)
+
+    {:ok, result} = Sonix.suggest(conn, "messages", "spi")
+    assert result === ["spiderman", "spiderwoman"]
+
+    Sonix.quit(conn)
+  end
+
+  test "custom name of the GenServer" do
+    {:ok, _conn} = Sonix.init("localhost", 1491, name: SearchConn)
+    {:ok, _conn} = Sonix.start(SearchConn, "search", @pwd)
+
+    assert :ok === Sonix.ping(SearchConn)
+
+    Sonix.quit(SearchConn)
+  end
+
+  test "QUIT" do
+    conn = start_mode("search")
+
+    assert :ok === Sonix.quit(conn)
+    refute Process.alive?(conn)
+  end
+
+  test "QUIT when mode not started" do
+    {:ok, conn} = Sonix.init()
+
+    assert :ok === Sonix.quit(conn)
+    refute Process.alive?(conn)
+  end
+
+  test "QUIT when authentication_failed" do
+    {:ok, conn} = Sonix.init()
+    {:error, _} = Sonix.start(conn, "search", "InvalidPassword")
+
+    assert :ok === Sonix.quit(conn)
+    refute Process.alive?(conn)
+  end
+
+  defp ingest() do
+    conn = start_mode("ingest")
+
+    :ok = Sonix.Modes.Ingest.push(conn, "messages", "obj:1", "Spiderman is bad movie")
+
+    :ok =
+      Sonix.Modes.Ingest.push(conn, "messages", "obj:2", "Batman and spiderwoman is good Movie")
+
+    Sonix.quit(conn)
+  end
+
+  defp flush() do
+    conn = start_mode("ingest")
+
+    {:ok, _count} = Sonix.flush(conn, "messages")
+
+    Sonix.quit(conn)
+  end
+
+  defp start_mode(mode) do
+    {:ok, conn} = Sonix.init()
+    {:ok, conn} = Sonix.start(conn, mode, @pwd)
+
+    conn
+  end
 end
