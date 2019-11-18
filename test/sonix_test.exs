@@ -108,6 +108,14 @@ defmodule SonixTest do
     refute Process.alive?(conn)
   end
 
+  test "QUIT when authentication_failed" do
+    {:ok, conn} = Sonix.init()
+    {:error, _} = Sonix.start(conn, "search", "InvalidPassword")
+
+    assert :ok === Sonix.quit(conn)
+    refute Process.alive?(conn)
+  end
+
   defp ingest() do
     conn = start_mode("ingest")
 
