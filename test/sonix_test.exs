@@ -52,6 +52,26 @@ defmodule SonixTest do
     Sonix.quit(conn)
   end
 
+  test "SEARCH LARGE data" do
+    conn = start_mode("ingest")
+
+    prefix = "00000000-0000-0000-0000-000000000"
+    for i <- 1..100 do
+      uuid = prefix <> (i |> to_string() |> String.pad_leading(3, "0"))
+      :ok = Sonix.Modes.Ingest.push(conn, "messages", uuid, "Spiderman #{i} is bad movie")
+    end
+    Sonix.quit(conn)
+
+    conn = start_mode("search")
+
+    {:ok, result} = Sonix.query(conn, "messages", "Spiderman", limit: 100)
+    Enum.each result, fn uuid ->
+      assert String.length(uuid) === 36
+    end
+
+    Sonix.quit(conn)
+  end
+
   test "SEARCH INVALID DATA" do
     ingest()
 

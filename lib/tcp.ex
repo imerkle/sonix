@@ -31,10 +31,24 @@ defmodule Sonix.Tcp do
       PONG
   """
   def recv(conn, bytes \\ 0, timeout \\ 3000) do
-    with({:ok, response} <- Connection.call(conn, {:recv, bytes, timeout})) do
+    with({:ok, response} <- do_recv(conn, bytes, timeout)) do
       case String.trim(response) do
         "ERR " <> reason -> {:error, reason}
         response -> {:ok, response}
+      end
+    else
+      error -> error
+    end
+  end
+
+  defp do_recv(responses \\ [], conn, bytes, timeout) do
+    with(
+      {:ok, response} <- Connection.call(conn, {:recv, bytes, timeout})
+    ) do
+      if String.ends_with?(response, "\r\n") do
+        {:ok, Enum.reduce(responses, response, & &1 <> &2)}
+      else
+        do_recv([response | responses], conn, bytes, timeout)
       end
     else
       error -> error
