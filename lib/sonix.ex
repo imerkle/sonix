@@ -9,10 +9,15 @@ defmodule Sonix do
 
   @doc """
   Initializes Tcp Client Genserver
+  
+  If the `host` parameter value is as a hostname `String` then it should convert to charlists structure by `Kernel.to_charlist/1`.
 
   ## Examples
 
   iex> Sonix.init()
+  #PID<0.177.0>
+  
+  iex> Sonix.init(Kernel.to_charlist("sonic_hostname"))
   #PID<0.177.0>
 
   """
